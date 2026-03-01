@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex TODO Hub Observer"
+  short_description: "Rebuild Obsidian TODOs from codexhub-grounded context."
+  default_prompt: "Use codexhub as the location anchor, then rebuild the user TODO into a source-scored Codex TODO."

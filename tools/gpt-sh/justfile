@@ -1,0 +1,35 @@
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+staged_skill := "/home/claw/Desktop/akihub/tools/codex-todo-hub-observer/codex-todo-hub-observer"
+live_skill := "/home/claw/.codex/skills/codex-todo-hub-observer"
+validator := "/home/claw/.codex/skills/.system/skill-creator/scripts/quick_validate.py"
+akihub_resources := "/home/claw/Desktop/akihub/resources"
+
+# (why) 退避したスキルを Codex が使う本来の場所へ戻したい時に使う (what) Desktop 側にある codex-todo-hub-observer を ~/.codex/skills へ戻す (do) 既に戻っていれば何もしないで終了し 未復帰なら mv で本体を移動し 空の親ディレクトリを片づける (linuxに影響のある場所) /home/claw/Desktop/akihub/tools/codex-todo-hub-observer と /home/claw/.codex/skills
+restore-codex-todo-hub-observer:
+  if [ -e "{{live_skill}}" ]; then echo "already restored: {{live_skill}}"; exit 0; fi
+  test -d "{{staged_skill}}"
+  mv "{{staged_skill}}" "{{live_skill}}"
+  rmdir "/home/claw/Desktop/akihub/tools/codex-todo-hub-observer" 2>/dev/null || true
+  echo "restored: {{live_skill}}"
+
+# (why) 復帰したスキルが壊れていないか確認したい時に使う (what) 必須ファイルがあるか確認して skill-creator の quick_validate.py を実行する (do) SKILL.md と agents/openai.yaml の存在を test で確認し その後 python3 でバリデータを走らせる (linuxに影響のある場所) /home/claw/.codex/skills/codex-todo-hub-observer と /home/claw/.codex/skills/.system/skill-creator/scripts/quick_validate.py
+test-codex-todo-hub-observer:
+  test -f "{{live_skill}}/SKILL.md"
+  test -f "{{live_skill}}/agents/openai.yaml"
+  python3 "{{validator}}" "{{live_skill}}"
+
+# (why) 1つの 7z を JSON に変えて akihub の決まった場所へ置きたい時に使う (what) 渡した INPUT を ~/.local/bin/gpt-log-structure で処理して /akihub/resources へ出す (do) 先に resources を mkdir -p で作り その後 gpt-log-structure に 入力ファイル と 固定出力先 を渡す (linuxに影響のある場所) 入力で指定した 7z 読み取り ~/.local/bin/gpt-log-structure 実行 /akihub/resources 書き込み /akihub/tools/gpt-sh/gpt-log-structure-*.log 作成
+gpt-structure INPUT:
+  mkdir -p "{{akihub_resources}}"
+  ~/.local/bin/gpt-log-structure "{{INPUT}}" "{{akihub_resources}}"
+
+# (why) akihub 用として 1つの 7z を迷わず同じ出力先へ流したい時に使う (what) 実質 gpt-structure と同じで INPUT を固定の /akihub/resources へ JSON 化する (do) resources を作ってから ~/.local/bin/gpt-log-structure を実行し 出力先は毎回 /akihub/resources に固定する (linuxに影響のある場所) 入力で指定した 7z 読み取り ~/.local/bin/gpt-log-structure 実行 /akihub/resources 書き込み /akihub/tools/gpt-sh/gpt-log-structure-*.log 作成
+gpt-akihub INPUT:
+  mkdir -p "{{akihub_resources}}"
+  ~/.local/bin/gpt-log-structure "{{INPUT}}" "{{akihub_resources}}"
+
+# (why) あるフォルダの中にある複数の 7z をまとめて処理したい時に使う (what) DIR の直下にある *.7z を順番に全部読み 各ファイルを固定の /akihub/resources へ JSON 化する (do) resources を作り bash の nullglob で 7z 一覧を取り 1件以上あることを確認してから for で ~/.local/bin/gpt-log-structure を1個ずつ実行する (linuxに影響のある場所) DIR 配下の *.7z 読み取り ~/.local/bin/gpt-log-structure 実行 /akihub/resources 書き込み /akihub/tools/gpt-sh/gpt-log-structure-*.log 作成
+gpt-batch DIR:
+  mkdir -p "{{akihub_resources}}"
+  shopt -s nullglob; files=({{DIR}}/*.7z); test "${#files[@]}" -gt 0; for f in "${files[@]}"; do ~/.local/bin/gpt-log-structure "$f" "{{akihub_resources}}"; done

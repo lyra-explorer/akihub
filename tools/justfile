@@ -1,0 +1,19 @@
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+staged_skill := "/home/claw/Desktop/akihub/tools/codex-todo-hub-observer/codex-todo-hub-observer"
+live_skill := "/home/claw/.codex/skills/codex-todo-hub-observer"
+validator := "/home/claw/.codex/skills/.system/skill-creator/scripts/quick_validate.py"
+
+# 退避した codex-todo-hub-observer を .codex/skills へ戻す
+restore-codex-todo-hub-observer:
+  if [ -e "{{live_skill}}" ]; then echo "already restored: {{live_skill}}"; exit 0; fi
+  test -d "{{staged_skill}}"
+  mv "{{staged_skill}}" "{{live_skill}}"
+  rmdir "/home/claw/Desktop/akihub/tools/codex-todo-hub-observer" 2>/dev/null || true
+  echo "restored: {{live_skill}}"
+
+# 復帰済みスキルの存在確認と quick_validate を実行する
+test-codex-todo-hub-observer:
+  test -f "{{live_skill}}/SKILL.md"
+  test -f "{{live_skill}}/agents/openai.yaml"
+  python3 "{{validator}}" "{{live_skill}}"
